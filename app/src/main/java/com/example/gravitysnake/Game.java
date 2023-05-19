@@ -23,6 +23,9 @@ public class Game {
     // The frequency at which food is spawned. If there is no food,
     // a new food is spawned regardless of the frequency.
     private static final int FOOD_SPAWN_FREQUENCY = 10;
+
+    private static final int MAX_FOOD = 5;
+
     private final int cellSize;
     private final Snake snake;
     private final int width;
@@ -37,13 +40,13 @@ public class Game {
         this.width = width;
         this.height = height;
 
-        snake = new Snake(width / 2, height / 2, Snake.Direction.DOWN);
+        snake = new Snake(width * cellSize / 2, height * cellSize / 2, Snake.Direction.DOWN);
     }
 
     // Return true if the game is playing, false if the game is over.
     // The game is over when the snake eats itself.
     public synchronized boolean runOneTick() {
-        if (timeSinceLastFood >= FOOD_SPAWN_FREQUENCY) {
+        if (timeSinceLastFood >= FOOD_SPAWN_FREQUENCY && food.size() < MAX_FOOD) {
             food.add(spawnFood());
             timeSinceLastFood = 0;
         } else {
@@ -65,10 +68,17 @@ public class Game {
     // It should not overlap with an existing food or the snake.
     private Coordinate spawnFood() {
         Coordinate coordinate;
+        boolean collideWithSnake;
+        boolean collideWithFood;
         do {
-            coordinate = new Coordinate((int) (Math.random() * (width - cellSize)),
-                                        (int) (Math.random() * (height - cellSize)));
-        } while (collides(snake, coordinate, cellSize) || collideWithFood(coordinate));
+            coordinate = new Coordinate((int) (Math.random() * (width * cellSize)),
+                                        (int) (Math.random() * (height * cellSize)));
+
+            collideWithSnake = collides(snake, coordinate, cellSize);
+            collideWithFood = collideWithFood(coordinate);
+
+        } while (collideWithSnake || collideWithFood);
+
         return coordinate;
     }
 
@@ -81,7 +91,9 @@ public class Game {
     @NonNull
     @Contract(value = "_ -> new", pure = true)
     private Coordinate constrain(@NonNull Coordinate coordinate) {
-        return new Coordinate((coordinate.x + width) % width, (coordinate.y + height) % height);
+        // Snake position may be negative, even in multiples of the size.
+        return new Coordinate((coordinate.x % (width * cellSize) + (width * cellSize)) % (width * cellSize),
+                              (coordinate.y % (height * cellSize) + (height * cellSize)) % (height * cellSize));
     }
 
     // Returns the coordinates of the snake constrained to the bounds of the game.
@@ -105,7 +117,7 @@ public class Game {
         snake.setVelocity(velocity);
     }
 
-    private boolean collideWithSelf(Snake snake) {
-        return snake.coordinates().anyMatch(c -> collides(snake.head(), c, cellSize));
+    private boolean collideWithSelf(@NonNull Snake snake) {
+        return snake.coordinates().skip(1).anyMatch(c -> collides(snake.head(), c, cellSize));
     }
 }

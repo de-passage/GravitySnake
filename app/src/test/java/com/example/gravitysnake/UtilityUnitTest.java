@@ -1,10 +1,7 @@
 package com.example.gravitysnake;
 
 import org.junit.Test;
-
 import static org.junit.Assert.*;
-
-import com.example.gravitysnake.Utility;
 
 /**
  * Example local unit test, which will execute on the development machine (host).
@@ -17,6 +14,10 @@ public class UtilityUnitTest {
         Coordinate left = new Coordinate(0, 0);
         Coordinate right = new Coordinate(0, 0);
         assertTrue(Utility.collides(left, right, 1));
+
+        Coordinate left2 = new Coordinate(10, 25);
+        Coordinate right2 = new Coordinate(-5, -13);
+        assertTrue(Utility.collides(left2, right2, 50));
     }
 
     @Test

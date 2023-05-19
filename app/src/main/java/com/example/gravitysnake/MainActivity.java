@@ -12,20 +12,18 @@ import androidx.appcompat.app.AppCompatActivity;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private final int cellSize = 50;
-    private final int MIN_VELOCITY = 1;
-    private final int MAX_VELOCITY = cellSize;
     private Thread thread;
     private Game game;
     private GravitySnakeView gravitySnakeView;
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private Sensor magnetometer;
-    private float[] lastAccelerometer = new float[3];
-    private float[] lastMagnetometer = new float[3];
+    private final float[] lastAccelerometer = new float[3];
+    private final float[] lastMagnetometer = new float[3];
     private boolean accelerometerSet = false;
     private boolean magnetometerSet = false;
-    private float[] rotationMatrix = new float[9];
-    private float[] orientation = new float[3];
+    private final float[] rotationMatrix = new float[9];
+    private final float[] orientation = new float[3];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,26 +55,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         int width = gravitySnakeView.getWidth() / cellSize;
         int height = gravitySnakeView.getHeight() / cellSize;
-        final Game game = new Game(width, height, cellSize);
+        game = new Game(width, height, cellSize);
 
-        thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                do {
-                    try {
-                        Thread.sleep(1000 / 60); // 60 FPS
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            gravitySnakeView.render(game);
-                        }
-                    });
+        thread = new Thread(() -> {
+            do {
+                try {
+                    Thread.sleep(1000 / 60); // 60 FPS
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-                while (game.runOneTick());
+                runOnUiThread(() -> gravitySnakeView.render(game));
             }
+            while (game.runOneTick());
         });
         thread.start();
     }
@@ -117,7 +107,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             float azimuthInDegrees = (float) (Math.toDegrees(azimuthInRadians) + 360) % 360;
 
             Snake.Direction direction;
-            int value = computeValue(azimuthInDegrees, MIN_VELOCITY, MAX_VELOCITY);
+            int MIN_VELOCITY = 1;
+            int value = (int) ((azimuthInDegrees / 360) * (cellSize - MIN_VELOCITY) + MIN_VELOCITY);
             if (azimuthInDegrees >= 0 && azimuthInDegrees < 90) {
                 direction = Snake.Direction.UP;
                 game.setDirection(direction);
@@ -136,10 +127,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 game.setVelocity(value);
             }
         }
-    }
-
-    private int computeValue(float degree, int min, int max) {
-        return (int) ((degree / 360) * (max - min) + min);
     }
 
     @Override

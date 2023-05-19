@@ -2,6 +2,7 @@ package com.example.gravitysnake;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
@@ -38,8 +39,11 @@ public class GravitySnakeView extends View {
     }
 
     private void init() {
-        snakePaint.setColor(0xff00ff00);
-        foodPaint.setColor(0xffff0000);
+        snakePaint.setColor(Color.GREEN);
+        snakePaint.setStyle(Paint.Style.FILL);
+
+        foodPaint.setColor(Color.RED);
+        foodPaint.setStyle(Paint.Style.FILL);
     }
 
 
@@ -47,8 +51,13 @@ public class GravitySnakeView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         for (Coordinate c : snakeCoordinates) {
-            canvas.drawRect(c.x * cellSize, c.y * cellSize, (c.x + 1) * cellSize,
-                            (c.y + 1) * cellSize, snakePaint);
+            canvas.drawRect(c.x, c.y, c.x +  cellSize,
+                            c.y + cellSize, snakePaint);
+        }
+
+        for (Coordinate c : foodCoordinates) {
+            canvas.drawRect(c.x, c.y, c.x + cellSize,
+                            c.y + cellSize, foodPaint);
         }
     }
 
