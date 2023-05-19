@@ -1,8 +1,7 @@
 package com.example.gravitysnake;
 
-import static java.util.stream.Collectors.toList;
-
 import static com.example.gravitysnake.Utility.collides;
+import static java.util.stream.Collectors.toList;
 
 import androidx.annotation.NonNull;
 
@@ -55,7 +54,7 @@ public class Game {
         snake.move();
         boolean eatItself = collideWithSelf(snake);
         for (Coordinate c : food) {
-            if (collides(snake, c, cellSize)) {
+            if (collides(constrain(snake.head()), c, cellSize)) {
                 snake.grow();
                 food.remove(c);
                 break;
@@ -77,7 +76,8 @@ public class Game {
             collideWithSnake = collides(snake, coordinate, cellSize);
             collideWithFood = collideWithFood(coordinate);
 
-        } while (collideWithSnake || collideWithFood);
+        }
+        while (collideWithSnake || collideWithFood);
 
         return coordinate;
     }
@@ -92,8 +92,9 @@ public class Game {
     @Contract(value = "_ -> new", pure = true)
     private Coordinate constrain(@NonNull Coordinate coordinate) {
         // Snake position may be negative, even in multiples of the size.
-        return new Coordinate((coordinate.x % (width * cellSize) + (width * cellSize)) % (width * cellSize),
-                              (coordinate.y % (height * cellSize) + (height * cellSize)) % (height * cellSize));
+        return new Coordinate(
+                (coordinate.x % (width * cellSize) + (width * cellSize)) % (width * cellSize),
+                (coordinate.y % (height * cellSize) + (height * cellSize)) % (height * cellSize));
     }
 
     // Returns the coordinates of the snake constrained to the bounds of the game.

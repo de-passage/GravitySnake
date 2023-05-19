@@ -1,29 +1,23 @@
 package com.example.gravitysnake;
 
+import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.view.ViewTreeObserver;
+import android.view.WindowManager;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
-    private final int cellSize = 50;
     private Thread thread;
     private Game game;
     private GravitySnakeView gravitySnakeView;
     private SensorManager sensorManager;
-    private Sensor accelerometer;
-    private Sensor magnetometer;
-    private final float[] lastAccelerometer = new float[3];
-    private final float[] lastMagnetometer = new float[3];
-    private boolean accelerometerSet = false;
-    private boolean magnetometerSet = false;
-    private final float[] rotationMatrix = new float[9];
-    private final float[] orientation = new float[3];
+    private Sensor gravitySensor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,8 +25,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
 
         gravitySnakeView = findViewById(R.id.snake_game_view);
         gravitySnakeView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -53,6 +46,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
 
+        int cellSize = 50;
         int width = gravitySnakeView.getWidth() / cellSize;
         int height = gravitySnakeView.getHeight() / cellSize;
         game = new Game(width, height, cellSize);
@@ -74,15 +68,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
-        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(this, gravitySensor, SensorManager.SENSOR_DELAY_GAME);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        sensorManager.unregisterListener(this, accelerometer);
-        sensorManager.unregisterListener(this, magnetometer);
+        sensorManager.unregisterListener(this, gravitySensor);
     }
 
     @Override
@@ -90,41 +82,38 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (game == null) {
             return;
         }
+        final int MAX_VELOCITY = 30;
+        final int MIN_VELOCITY = 1;
+        if (event.sensor.getType() == Sensor.TYPE_GRAVITY) {
+            float x = event.values[0]; // Gravity force along the x-axis
+            float y = event.values[1]; // Gravity force along the y-axis
 
-        if (event.sensor == accelerometer) {
-            System.arraycopy(event.values, 0, lastAccelerometer, 0, event.values.length);
-            accelerometerSet = true;
-        } else if (event.sensor == magnetometer) {
-            System.arraycopy(event.values, 0, lastMagnetometer, 0, event.values.length);
-            magnetometerSet = true;
-        }
+            // Get the absolute values to determine the direction of the greater force.
+            float absX = Math.abs(x);
+            float absY = Math.abs(y);
 
-        if (accelerometerSet && magnetometerSet) {
-            SensorManager.getRotationMatrix(rotationMatrix, null, lastAccelerometer,
-                                            lastMagnetometer);
-            SensorManager.getOrientation(rotationMatrix, orientation);
-            float azimuthInRadians = orientation[0];
-            float azimuthInDegrees = (float) (Math.toDegrees(azimuthInRadians) + 360) % 360;
+            if (absX > absY) {
+                // The x-component of the gravity is stronger, so we set the direction to either LEFT or RIGHT.
+                if (x > 0) {
+                    game.setDirection(Snake.Direction.LEFT);
+                } else {
+                    game.setDirection(Snake.Direction.RIGHT);
+                }
 
-            Snake.Direction direction;
-            int MIN_VELOCITY = 1;
-            int value = (int) ((azimuthInDegrees / 360) * (cellSize - MIN_VELOCITY) + MIN_VELOCITY);
-            if (azimuthInDegrees >= 0 && azimuthInDegrees < 90) {
-                direction = Snake.Direction.UP;
-                game.setDirection(direction);
-                game.setVelocity(value);
-            } else if (azimuthInDegrees >= 90 && azimuthInDegrees < 180) {
-                direction = Snake.Direction.RIGHT;
-                game.setDirection(direction);
-                game.setVelocity(value);
-            } else if (azimuthInDegrees >= 180 && azimuthInDegrees < 270) {
-                direction = Snake.Direction.DOWN;
-                game.setDirection(direction);
-                game.setVelocity(value);
-            } else if (azimuthInDegrees >= 270 && azimuthInDegrees < 360) {
-                direction = Snake.Direction.LEFT;
-                game.setDirection(direction);
-                game.setVelocity(value);
+                // Scale the velocity based on the gravity
+                game.setVelocity((int) (absX * (MAX_VELOCITY - MIN_VELOCITY) / SensorManager.GRAVITY_EARTH) +
+                                         MIN_VELOCITY);
+            } else {
+                // The y-component of the gravity is stronger, so we set the direction to either UP or DOWN.
+                if (y > 0) {
+                    game.setDirection(Snake.Direction.DOWN);
+                } else {
+                    game.setDirection(Snake.Direction.UP);
+                }
+
+                // Scale the velocity based on the gravity
+                game.setVelocity((int) (absY * (MAX_VELOCITY - MIN_VELOCITY) / SensorManager.GRAVITY_EARTH) +
+                                         MIN_VELOCITY);
             }
         }
     }
