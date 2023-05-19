@@ -33,6 +33,9 @@ public class Game {
     private final List<Coordinate> food = new ArrayList<>();
 
     private int timeSinceLastFood = 0;
+    private int score;
+
+    private boolean gameOver = false;
 
     public Game(int width, int height, int cellSize, int foodSpawnFrequency) {
         this.cellSize = cellSize;
@@ -47,6 +50,10 @@ public class Game {
     // Return true if the game is playing, false if the game is over.
     // The game is over when the snake eats itself.
     public synchronized boolean runOneTick() {
+        if (gameOver) {
+            return false;
+        }
+
         if (food.size() == 0 || (timeSinceLastFood >= foodSpawnFrequency && food.size() < MAX_FOOD)) {
             food.add(spawnFood());
             timeSinceLastFood = 0;
@@ -59,10 +66,12 @@ public class Game {
             if (collides(constrain(snake.head()), c, cellSize)) {
                 snake.grow();
                 food.remove(c);
+                score++;
                 break;
             }
         }
-        return !eatItself;
+        gameOver = eatItself;
+        return !gameOver;
     }
 
     // Compute an appropriate spawn location for the food.
@@ -122,5 +131,17 @@ public class Game {
 
     private boolean collideWithSelf(@NonNull Snake snake) {
         return snake.bitesItself();
+    }
+
+    public synchronized int getScore() {
+        return score;
+    }
+
+    public synchronized boolean isGameOver() {
+        return gameOver;
+    }
+
+    public synchronized void stop() {
+        gameOver = true;
     }
 }

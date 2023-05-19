@@ -1,8 +1,5 @@
 package com.example.gravitysnake;
 
-import static java.time.Instant.now;
-
-import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -10,11 +7,10 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.ViewTreeObserver;
-import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-
-import java.time.Instant;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -27,6 +23,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManager;
     private Sensor gravitySensor;
 
+    private TextView scoreTextView;
+    private Button restartButton;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,18 +35,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
 
         gravitySnakeView = findViewById(R.id.snake_game_view);
-        gravitySnakeView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                gravitySnakeView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                runGame();
-            }
-        });
+        restartButton = findViewById(R.id.restart_button);
+        scoreTextView = findViewById(R.id.score_text_view);
+        restartButton.setEnabled(false);
+
+        gravitySnakeView.getViewTreeObserver()
+                .addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                    @Override
+                    public void onGlobalLayout() {
+                        gravitySnakeView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                        runGame();
+
+                        restartButton.setOnClickListener(v -> runGame());
+                        restartButton.setEnabled(true);
+                    }
+                });
+
+        scoreTextView = findViewById(R.id.score_text_view);
     }
 
     private void runGame() {
         if (thread != null) {
             try {
+                if (!game.isGameOver()) {
+                    game.stop();
+                }
                 thread.join(10_000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -62,7 +74,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         thread = new Thread(() -> {
             long start = SystemClock.elapsedRealtime();
             do {
-                runOnUiThread(() -> gravitySnakeView.render(game));
+                runOnUiThread(() -> {
+                    scoreTextView.setText(getString(R.string.score_text,
+                                                    String.valueOf(game.getScore())));
+                    gravitySnakeView.render(game);
+                });
                 long now = SystemClock.elapsedRealtime();
                 long elapsed = now - start;
                 start = now;
@@ -97,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (game == null) {
             return;
         }
-        final int MAX_VELOCITY = 30;
+        final int MAX_VELOCITY = 23;
         final int MIN_VELOCITY = 1;
         if (event.sensor.getType() == Sensor.TYPE_GRAVITY) {
             float x = event.values[0]; // Gravity force along the x-axis
@@ -116,8 +132,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
 
                 // Scale the velocity based on the gravity
-                game.setVelocity((int) (absX * (MAX_VELOCITY - MIN_VELOCITY) / SensorManager.GRAVITY_EARTH) +
-                                         MIN_VELOCITY);
+                game.setVelocity(
+                        (int) (absX * (MAX_VELOCITY - MIN_VELOCITY) / SensorManager.GRAVITY_EARTH) +
+                                MIN_VELOCITY);
             } else {
                 // The y-component of the gravity is stronger, so we set the direction to either UP or DOWN.
                 if (y > 0) {
@@ -127,8 +144,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
 
                 // Scale the velocity based on the gravity
-                game.setVelocity((int) (absY * (MAX_VELOCITY - MIN_VELOCITY) / SensorManager.GRAVITY_EARTH) +
-                                         MIN_VELOCITY);
+                game.setVelocity(
+                        (int) (absY * (MAX_VELOCITY - MIN_VELOCITY) / SensorManager.GRAVITY_EARTH) +
+                                MIN_VELOCITY);
             }
         }
     }
