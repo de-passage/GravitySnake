@@ -1,18 +1,26 @@
 package com.example.gravitysnake;
 
+import static java.time.Instant.now;
+
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.time.Instant;
+
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
+    private static final int TICK_PER_SECOND = 30;
+    private static final int TICK_LENGTH = 1000 / TICK_PER_SECOND;
+    private static final int FOOD_SPAWN_FREQUENCY = TICK_PER_SECOND * 5;
     private Thread thread;
     private Game game;
     private GravitySnakeView gravitySnakeView;
@@ -49,16 +57,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         int cellSize = 50;
         int width = gravitySnakeView.getWidth() / cellSize;
         int height = gravitySnakeView.getHeight() / cellSize;
-        game = new Game(width, height, cellSize);
+        game = new Game(width, height, cellSize, FOOD_SPAWN_FREQUENCY);
 
         thread = new Thread(() -> {
+            long start = SystemClock.elapsedRealtime();
             do {
-                try {
-                    Thread.sleep(1000 / 60); // 60 FPS
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
                 runOnUiThread(() -> gravitySnakeView.render(game));
+                long now = SystemClock.elapsedRealtime();
+                long elapsed = now - start;
+                start = now;
+
+                if (elapsed < TICK_LENGTH) {
+                    try {
+                        Thread.sleep(TICK_LENGTH - elapsed);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
             while (game.runOneTick());
         });

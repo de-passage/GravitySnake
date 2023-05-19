@@ -1,7 +1,10 @@
 package com.example.gravitysnake;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public class Snake {
@@ -19,10 +22,16 @@ public class Snake {
 
     int velocity = 1;
 
-    public Snake(int x, int y, Direction direction) {
+    int distanceTraveled = 0;
+    final int bodySize;
+
+    Deque<Coordinate> path = new ArrayDeque<>();
+
+    public Snake(int x, int y, Direction direction, int bodySize) {
         xs.add(x);
         ys.add(y);
         this.direction = direction;
+        this.bodySize = bodySize;
     }
 
     // Grow the snake by one unit.
@@ -51,6 +60,9 @@ public class Snake {
                 xs.set(0, xs.get(0) + velocity);
                 break;
         }
+
+        distanceTraveled += velocity;
+        path.addFirst(head());
     }
 
     // Define the direction of the snake.
@@ -72,5 +84,27 @@ public class Snake {
 
     public Coordinate head() {
         return new Coordinate(xs.get(0), ys.get(0));
+    }
+
+    public boolean bitesItself() {
+        return coordinates().anyMatch(this::checkCollision);
+    }
+
+    private boolean checkCollision(Coordinate bodyPart) {
+        while (distanceTraveled > bodySize && !path.isEmpty()) {
+            distanceTraveled -= distance(Objects.requireNonNull(path.peekLast()),
+                                         Objects.requireNonNull(path.peekFirst()));
+            path.removeLast();
+        }
+
+        return !path.contains(bodyPart);
+    }
+
+    private int distance(Coordinate p1, Coordinate p2) {
+        return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+    }
+
+    public int size() {
+        return xs.size();
     }
 }

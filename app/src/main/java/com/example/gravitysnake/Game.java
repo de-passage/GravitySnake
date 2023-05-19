@@ -21,7 +21,7 @@ public class Game {
 
     // The frequency at which food is spawned. If there is no food,
     // a new food is spawned regardless of the frequency.
-    private static final int FOOD_SPAWN_FREQUENCY = 10;
+    private final int foodSpawnFrequency;
 
     private static final int MAX_FOOD = 5;
 
@@ -34,18 +34,20 @@ public class Game {
 
     private int timeSinceLastFood = 0;
 
-    public Game(int width, int height, int cellSize) {
+    public Game(int width, int height, int cellSize, int foodSpawnFrequency) {
         this.cellSize = cellSize;
         this.width = width;
         this.height = height;
+        this.foodSpawnFrequency = foodSpawnFrequency;
 
-        snake = new Snake(width * cellSize / 2, height * cellSize / 2, Snake.Direction.DOWN);
+        snake = new Snake(width * cellSize / 2, height * cellSize / 2, Snake.Direction.DOWN,
+                          cellSize);
     }
 
     // Return true if the game is playing, false if the game is over.
     // The game is over when the snake eats itself.
     public synchronized boolean runOneTick() {
-        if (timeSinceLastFood >= FOOD_SPAWN_FREQUENCY && food.size() < MAX_FOOD) {
+        if (food.size() == 0 || (timeSinceLastFood >= foodSpawnFrequency && food.size() < MAX_FOOD)) {
             food.add(spawnFood());
             timeSinceLastFood = 0;
         } else {
@@ -119,6 +121,6 @@ public class Game {
     }
 
     private boolean collideWithSelf(@NonNull Snake snake) {
-        return snake.coordinates().skip(1).anyMatch(c -> collides(snake.head(), c, cellSize));
+        return snake.bitesItself();
     }
 }
